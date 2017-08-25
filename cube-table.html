@@ -276,6 +276,9 @@
           (sort !== undefined && count !== undefined && page !== undefined)
         )
         {
+          // copy data
+          data = data.slice();
+          
           // sort it
           sort = this.sort;
           if(sort && sort.length)
