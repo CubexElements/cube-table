@@ -25,8 +25,9 @@
         text-align: left;
         line-height: 48px;
         white-space: nowrap;
-        background: white;
+        background: var(--theme-500, white);
         padding: 5px;
+        border-bottom: 1px solid var(--border, #e0e0e0);
       }
 
       th {
@@ -39,6 +40,7 @@
         padding-left: 20px;
         cursor: pointer;
         position: relative;
+        color: #757575;
       }
 
       th:not([sort]):not(:hover) cube-icon {
@@ -56,7 +58,7 @@
       }
 
       th[sort] {
-        color: var(--accent-400, #888);
+        color: var(--accent-400, #303030);
       }
 
       th[sort="desc"] cube-icon {
@@ -123,8 +125,8 @@
           <template is="dom-if" if="[[isValid]]">
             <template is="dom-repeat" items="[[_rows]]" as="row">
               <tr>
-                <template is="dom-repeat" items="[[row]]">
-                  <td>[[item]]</td>
+                <template is="dom-repeat" items="[[columns]]" as="col">
+                  <td>[[_rowValue(row,col.key)]]</td>
                 </template>
               </tr>
             </template>
@@ -135,6 +137,8 @@
             </tr>
           </template>
         </tbody>
+        <tfoot>
+        </tfoot>
       </table>
     </div>
   </template>
@@ -155,6 +159,7 @@
       {
         return {
           isValid: { type: Boolean, value: false, computed: '__validate(columns,data)' },
+          localProcess: { type: Boolean, value: false },
 
           sort: { type: Array, value: function() { return []; } },
           count: { type: Number, value: 10 },
@@ -167,32 +172,50 @@
 
           data: { type: Array },
           dataUrl: { type: String },
-          _dataUrl: { type: String, computed: '_computeDataUrl(dataUrl,sort,count,page)' },
-          _rows: { type: Array, computed: '_computeRows(columns,data,sort,count,page,dataUrl)' },
-          _rowCount: { type: Number, computed: '_computeRowCount(_rows)' },
+          _dataUrl: { type: String, computed: '_computeDataUrl(dataUrl,localProcess,sort,count,page)' },
+          _rows: { type: Number, value: function() { return [] } },
+          _rowCount: { type: Number, computed: '_computeRowCount(data)' },
           noResults: { type: String, value: 'No results found' }
         };
       }
 
-      static get observers() { return ['_computeColumns(data)'] }
-
-      _computeDataUrl(dataUrl, sort, count, page)
+      static get observers()
       {
-        if(dataUrl)
+        return [
+          '_computeColumns(data)',
+          '_checkUrl(data,dataUrl,localProcess)',
+          '_checkData(data,dataUrl,localProcess,sort.*,count,page)'
+        ]
+      }
+
+      _computeDataUrl(dataUrl, localProcess, sort, count, page)
+      {
+        if(dataUrl && !localProcess)
         {
-          var attrs = 'sort=' + encodeURIComponent(btoa(sort)) +
-            '&count=' + count +
-            '&page=' + page;
+          var attrs = [];
+          if(sort && sort.length)
+          {
+            attrs.push('sort=' + encodeURIComponent(btoa(sort)));
+          }
+          if(count)
+          {
+            attrs.push('count=' + count);
+          }
+          if(page)
+          {
+            attrs.push('page=' + page);
+          }
+
           if(dataUrl.indexOf('?') > -1)
           {
-            return dataUrl + '&' + attrs;
+            return dataUrl + '&' + attrs.join('&');
           }
           else
           {
-            return dataUrl + '?' + attrs;
+            return dataUrl + '?' + attrs.join('&');
           }
         }
-        return null;
+        return dataUrl;
       }
 
       _columnTitle(item)
@@ -216,62 +239,57 @@
         return columns.length;
       }
 
-      _computeRows(columns, data, sort, count, page, dataUrl)
+      _checkUrl(data, dataUrl, localProcess)
       {
-        if(!data || !data.length || !columns || !columns.length)
+        if(data && dataUrl && !localProcess)
         {
-          return [];
+          this._rows = data;
         }
-
-        // if data comes from remote source, just use it verbatim
-        if(dataUrl)
-        {
-          return data;
-        }
-
-        // sort it
-        if(sort)
-        {
-          data.sort(function(a, b)
-          {
-            for(var sortIdx = 0; sortIdx < sort.length; sortIdx++)
-            {
-              var k = sort[sortIdx];
-              var neg = false;
-              if(k[0] === '-')
-              {
-                neg = true;
-                k = k.slice(1);
-              }
-              if(a[k] > b[k]) return neg ? -1 : 1;
-              if(a[k] < b[k]) return neg ? 1 : -1;
-            }
-            return 0;
-          });
-        }
-
-        var offset = (page - 1) * count;
-        data = data.slice(offset, offset + count);
-
-        // turn into array
-        var fieldKeys = columns ? columns : Object.keys(data[0])
-          .map(function(k) { return { key: k } });
-
-        for(var rowIdx = 0; rowIdx < data.length; rowIdx++)
-        {
-          // get field order
-          data[rowIdx] = fieldKeys.map(function(col)
-          {
-            return(col.format && col.format(data[rowIdx][col.key])) ||
-              data[rowIdx][col.key];
-          })
-        }
-
-        return data;
       }
+      _checkData(data, dataUrl, localProcess, sort, count, page)
+      {
+        if(data && (!dataUrl || localProcess) &&
+          (sort !== undefined && count !== undefined && page !== undefined)
+        )
+        {
+          // sort it
+          sort = this.sort;
+          if(sort && sort.length)
+          {
+            data.sort(function(a, b)
+            {
+              for(var sortIdx = 0; sortIdx < sort.length; sortIdx++)
+              {
+                var k = sort[sortIdx];
+                var neg = false;
+                if(k[0] === '-')
+                {
+                  neg = true;
+                  k = k.slice(1);
+                }
+                if(a[k] > b[k]) return neg ? -1 : 1;
+                if(a[k] < b[k]) return neg ? 1 : -1;
+              }
+              return 0;
+            });
+          }
+
+          var offset = (page - 1) * count;
+          this._rows = data.slice(offset, offset + count);
+        }
+      }
+
       _computeRowCount(rows)
       {
-        return rows.length;
+        if(rows !== undefined)
+        {
+          return rows.length;
+        }
+        return 0;
+      }
+      _rowValue(row, key)
+      {
+        return row[key];
       }
 
       __validate(cols, data)
