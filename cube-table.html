@@ -36,11 +36,31 @@
         -moz-user-select: none;
         -ms-user-select: none;
         user-select: none;
+        padding-left: 20px;
+        cursor: pointer;
+        position: relative;
       }
 
-      th[sort="asc"] cube-action {
-        cursor: pointer;
-        /* transform: rotate3d(180deg, 0, 0); */
+      th:not([sort]):not(:hover) cube-icon {
+        display: none;
+      }
+
+      th cube-icon {
+        position: absolute;
+        left: 0;
+        top: 18px;
+        pointer-events: none;
+        padding: 0;
+        width: 18px;
+        height: 18px;
+      }
+
+      th[sort] {
+        color: var(--accent-400, #888);
+      }
+
+      th[sort="desc"] cube-icon {
+        transform: scaleY(-1)
       }
 
       tr[no-results-row] td {
@@ -91,10 +111,10 @@
       <table>
         <thead>
           <tr>
-            <template is="dom-repeat" items="[[_columns]]">
-              <th sort$="[[_isSorted(item.key,sort,sort.*)]]">
+            <template is="dom-repeat" items="[[columns]]">
+              <th on-tap="_updateSort" item="[[item]]" sort$="[[_isSorted(item.key,sort,sort.*)]]">
                 [[_columnTitle(item)]]
-                <cube-action on-tap="_updateSort" item="[[item]]" icon="icons:sort"></cube-action>
+                <cube-icon icon="arrow-downward"></cube-icon>
               </th>
             </template>
           </tr>
@@ -143,17 +163,18 @@
           fixed: { type: Boolean, value: false, reflectToAttrubte: true },
 
           columns: { type: Array },
-          _columns: { type: Array, computed: '_computeColumns(columns,data)' },
-          _columnCount: { type: Number, computed: '_computeColumnCount(_columns)' },
+          _columnCount: { type: Number, computed: '_computeColumnCount(columns)' },
 
           data: { type: Array },
           dataUrl: { type: String },
           _dataUrl: { type: String, computed: '_computeDataUrl(dataUrl,sort,count,page)' },
-          _rows: { type: Array, computed: '_computeRows(_columns,data,sort,filter,count,page,dataUrl,sort.*)' },
+          _rows: { type: Array, computed: '_computeRows(columns,data,sort,count,page,dataUrl)' },
           _rowCount: { type: Number, computed: '_computeRowCount(_rows)' },
           noResults: { type: String, value: 'No results found' }
         };
       }
+
+      static get observers() { return ['_computeColumns(data)'] }
 
       _computeDataUrl(dataUrl, sort, count, page)
       {
@@ -182,28 +203,30 @@
           .replace(/[a-z][A-Z0-9]/g, function(r) { return r[0] + ' ' + r[1]; })
           .replace(/\b[a-z]/g, function(r) { return r.toUpperCase(); });
       }
-      _computeColumns(columns, data)
+      _computeColumns(data)
       {
-        if(columns)
+        if(data && data.length &&
+          (!this.columns || this.columns.length <= 0))
         {
-          return columns;
+          this.set('columns', Object.keys(data[0]).map(function(k) { return { key: k } }));
         }
-        if(data && data.length)
-        {
-          return Object.keys(data[0]).map(function(k) { return { key: k } });
-        }
-        return [];
       }
       _computeColumnCount(columns)
       {
         return columns.length;
       }
 
-      _computeRows(columns, data, sort, filter, count, page, dataUrl)
+      _computeRows(columns, data, sort, count, page, dataUrl)
       {
-        if(!data || !data.length)
+        if(!data || !data.length || !columns || !columns.length)
         {
           return [];
+        }
+
+        // if data comes from remote source, just use it verbatim
+        if(dataUrl)
+        {
+          return data;
         }
 
         // sort it
@@ -220,8 +243,8 @@
                 neg = true;
                 k = k.slice(1);
               }
-              if(a[k] > b[k]) return neg ? 1 : -1;
-              if(a[k] < b[k]) return neg ? -1 : 1;
+              if(a[k] > b[k]) return neg ? -1 : 1;
+              if(a[k] < b[k]) return neg ? 1 : -1;
             }
             return 0;
           });
