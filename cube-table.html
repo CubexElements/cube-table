@@ -11,6 +11,7 @@
         position: relative;
         display: block;
         width: 100%;
+        @apply --theme-100;
       }
 
       table {
@@ -23,24 +24,32 @@
       td {
         box-sizing: border-box;
         text-align: left;
-        line-height: 48px;
         white-space: nowrap;
-        background: var(--theme-500, white);
-        padding: 5px;
-        border-bottom: 1px solid var(--border, #e0e0e0);
+        padding: 0 28px;
+        border-bottom: 1px solid var(--divider-secondary-color, #e0e0e0);
+        @apply --text-secondary;
+        text-overflow: ellipsis;
+        overflow: hidden;
+      }
+
+      td {
+        line-height: 55px;
       }
 
       th {
+        line-height: 47px;
         -webkit-touch-callout: none;
         -webkit-user-select: none;
         -khtml-user-select: none;
         -moz-user-select: none;
         -ms-user-select: none;
         user-select: none;
-        padding-left: 20px;
         cursor: pointer;
         position: relative;
-        color: #757575;
+        font-weight: normal;
+        @apply --theme-600;
+        @apply --text-primary;
+        font-size: 12px;
       }
 
       th:not([sort]):not(:hover) cube-icon {
@@ -49,8 +58,8 @@
 
       th cube-icon {
         position: absolute;
-        left: 0;
-        top: 18px;
+        left: 7px;
+        top: 14px;
         pointer-events: none;
         padding: 0;
         width: 18px;
@@ -58,7 +67,7 @@
       }
 
       th[sort] {
-        color: var(--accent-400, #303030);
+        color: var(--accent-400-color, #303030);
       }
 
       th[sort="desc"] cube-icon {
@@ -80,7 +89,7 @@
 
        :host([fixed]) #spacer {
         width: 25%;
-        min-width: 100px;
+        min-width: 200px;
         flex: none;
       }
 
@@ -88,9 +97,9 @@
         width: 75%;
       }
 
-       :host tr td:first-of-type,
-       :host tr th:first-of-type {
-        min-width: 100px;
+       :host([fixed]) tr td:first-of-type,
+       :host([fixed]) tr th:first-of-type {
+        min-width: 200px;
         width: 25%;
       }
 
@@ -100,7 +109,22 @@
         z-index: 1;
         left: 0;
         top: auto;
-        border-right: 1px solid grey;
+        border-right: 1px solid var(--divider-secondary-color, #e0e0e0);
+      }
+
+       :host([fixed]) tr td:first-of-type {
+        @apply --theme-100;
+        @apply --text-primary;
+      }
+
+       :host tr td:first-of-type,
+       :host tr th:first-of-type {
+        padding-left: 24px;
+      }
+
+       :host tr td:last-of-type,
+       :host tr th:last-of-type {
+        padding-right: 24px;
       }
     </style>
 
